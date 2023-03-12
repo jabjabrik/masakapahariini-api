@@ -1,0 +1,976 @@
+openapi: 3.0.0
+info:
+   title: Unofficial masakapahariini (API)
+   description: >
+      Unofficial API for articles and recipes from [MAHI](https://www.masakapahariini.com) blog.
+
+
+      Built by scraping the MAHI site and stored in the database after the formatting process.
+
+
+      And periodically it will be scraping automatically.
+
+
+      Built with
+
+
+      * nodejs
+
+      * expressjs
+
+      * AWS S3
+
+      * AWS Dynamodb
+
+      * AWS Beanstalk
+
+
+      `Note` Use a rest client like a [postman](https://www.postman.com) because the amount of data is a lot.
+   contact:
+      email: yusufjabriko@gmail.com
+   version: 1.0.0
+
+servers:
+   - url: http://masakapahariini-api.ap-southeast-3.elasticbeanstalk.com
+     description: (production) server
+   - url: http://localhost:3000
+     description: (development) server
+
+tags:
+   - name: articles
+     description: Operations about articles
+   - name: recipes
+     description: Operations about recipes
+
+paths:
+   # ARTICLES #
+   /articles:
+      get:
+         tags:
+            - articles
+         summary: Get all articles
+         description: This endpoint allows to get all articles.
+         parameters:
+            - in: query
+              name: limit
+              description: Use query `limit` if you want to limit the data received.
+              schema:
+                 default: 10
+                 type: integer
+         responses:
+            200:
+               description: Success get all articles
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           total_data:
+                              type: integer
+                           data:
+                              type: array
+                              items:
+                                 $ref: "#/components/schemas/Article"
+            default:
+               description: Unexpected error
+
+   /articles/info:
+      get:
+         tags:
+            - articles
+         summary: Get information of article
+         description: This endpoint allows to get information of article.
+         responses:
+            200:
+               description: Success get information of article
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           data:
+                              type: object
+                              properties:
+                                 authors:
+                                    type: array
+                                    items:
+                                       type: string
+                                 categories:
+                                    type: array
+                                    items:
+                                       type: string
+                                 years:
+                                    type: array
+                                    items:
+                                       type: string
+                                 tags:
+                                    type: array
+                                    items:
+                                       type: string
+            default:
+               description: Unexpected error
+
+   /articles/{id}:
+      get:
+         tags:
+            - articles
+         summary: Get article by id
+         description: This endpoint allows to get an article by id.
+         parameters:
+            - name: id
+              in: path
+              required: true
+              description: id of article
+              schema:
+                 type: integer
+                 format: int64
+                 default: 43155
+         responses:
+            200:
+               description: Success get article by post-id
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           data:
+                              type: object
+                              $ref: "#/components/schemas/Article"
+            404:
+               $ref: "#/components/responses/ErrorArticle"
+               # description: Article Not found
+               # content:
+               #    application/json:
+               #       schema:
+               #          $ref: "#/components/schemas/Error"
+            default:
+               description: Unexpected error
+
+   /articles/image/{id}:
+      get:
+         tags:
+            - articles
+         summary: Get article image by id
+         description: This endpoint allows to get an article image by id.
+         parameters:
+            - name: id
+              in: path
+              required: true
+              description: id of article
+              schema:
+                 type: integer
+                 format: int64
+                 minimum: 1
+                 default: 43155
+         responses:
+            200:
+               description: success get article image with id
+               content:
+                  image/jpg:
+                     schema:
+                        type: string
+                        format: binary
+            404:
+               $ref: "#/components/responses/ErrorArticle"
+            default:
+               description: Unexpected error
+
+   /articles/keyword/{keyword}:
+      get:
+         tags:
+            - articles
+         summary: Get article by keyword
+         description: This endpoint allows to get an article by keyword.
+         parameters:
+            - name: keyword
+              in: path
+              required: true
+              description: Keyword of article
+              schema:
+                 type: string
+                 minimum: 1
+                 default: tingkat-kematangan-steak
+         responses:
+            200:
+               description: Success get article by keyword
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           data:
+                              type: object
+                              $ref: "#/components/schemas/Article"
+            404:
+               $ref: "#/components/responses/ErrorArticle"
+            default:
+               description: Unexpected error
+
+   /articles/tags/{tagNames}:
+      get:
+         tags:
+            - articles
+         summary: Get article by tags
+         description: >
+            This endpoint allows to get articles with one or more tags.
+
+
+            `/articles/info` to get a list of tags.
+         parameters:
+            - name: tagNames
+              in: path
+              required: true
+              description: >
+                 Tags of articles.
+
+
+                  * Use `-` for separators between tags.
+
+                  * Use `_` for tag spaces.
+              schema:
+                 type: string
+                 minimum: 1
+                 default: sehat-buka_puasa
+         responses:
+            200:
+               description: Success get articles by tags
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           total_data:
+                              type: integer
+                           data:
+                              type: array
+                              items:
+                                 type: object
+                                 $ref: "#/components/schemas/Article"
+            404:
+               $ref: "#/components/responses/ErrorArticle"
+            default:
+               description: Unexpected error
+
+   /articles/author/{author}:
+      get:
+         tags:
+            - articles
+         summary: Get article by author
+         description: >
+            This endpoint allows to get articles by author.
+
+
+            `/articles/info` to get a list of authors.
+         parameters:
+            - name: author
+              in: path
+              required: true
+              description: >
+                 Author of articles.
+
+
+                 * Use `_` for spaces.
+              schema:
+                 type: string
+                 minimum: 1
+                 default: tim_mahi
+         responses:
+            200:
+               description: Success get articles by author
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           total_data:
+                              type: integer
+                           data:
+                              type: array
+                              items:
+                                 type: object
+                                 $ref: "#/components/schemas/Article"
+            404:
+               $ref: "#/components/responses/ErrorArticle"
+            default:
+               description: Unexpected error
+
+   /articles/category/{category}:
+      get:
+         tags:
+            - articles
+         summary: Get articles by category
+         description: >
+            This endpoint allows to get articles by category.
+
+
+            `/articles/info` to get a list of categories.
+         parameters:
+            - name: category
+              in: path
+              required: true
+              description: >
+                 Category of article
+
+
+                 * Use `_` for spaces.
+              schema:
+                 type: string
+                 minimum: 1
+                 default: tips_masak
+
+         responses:
+            200:
+               description: Success get articles by category
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           total_data:
+                              type: integer
+                           data:
+                              type: array
+                              items:
+                                 type: object
+                                 $ref: "#/components/schemas/Article"
+            404:
+               $ref: "#/components/responses/ErrorArticle"
+            default:
+               description: Unexpected error
+
+   /articles/year/{year}:
+      get:
+         tags:
+            - articles
+         summary: Get articles by upload year
+         description: >
+            This endpoint allows to get articles by upload year.
+
+
+
+            `/articles/info` to get a list of upload years.
+         parameters:
+            - name: year
+              in: path
+              required: true
+              description: Upload year of article
+              schema:
+                 type: number
+                 minimum: 4
+                 default: 2022
+         responses:
+            200:
+               description: Success get articles by upload year
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           total_data:
+                              type: integer
+                           data:
+                              type: array
+                              items:
+                                 type: object
+                                 $ref: "#/components/schemas/Article"
+            404:
+               $ref: "#/components/responses/ErrorArticle"
+            default:
+               description: Unexpected error
+
+   # *RECIPES #
+   /recipes:
+      get:
+         tags:
+            - recipes
+         summary: Get all recipes
+         description: This endpoint allows to get all recipes.
+         parameters:
+            - in: query
+              name: limit
+              description: Limit the data received.
+              schema:
+                 default: 10
+                 type: integer
+         responses:
+            200:
+               description: Success get all recipes
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           total_data:
+                              type: integer
+                           data:
+                              type: array
+                              items:
+                                 $ref: "#/components/schemas/Recipe"
+            default:
+               description: Unexpected error
+
+   /recipes/info:
+      get:
+         tags:
+            - recipes
+         summary: Get information of recipe
+         description: This endpoint allows to get information of recipe.
+         responses:
+            200:
+               description: Success get information of recipe
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           data:
+                              type: object
+                              properties:
+                                 authors:
+                                    type: array
+                                    items:
+                                       type: string
+                                 categories:
+                                    type: array
+                                    items:
+                                       type: string
+                                 years:
+                                    type: array
+                                    items:
+                                       type: string
+                                 tags:
+                                    type: array
+                                    items:
+                                       type: string
+            default:
+               description: Unexpected error
+
+   /recipes/{id}:
+      get:
+         tags:
+            - recipes
+         summary: Get recipe by id
+         description: This endpoint allows to get an recipe by id.
+         parameters:
+            - name: id
+              in: path
+              required: true
+              description: id of recipe
+              schema:
+                 type: integer
+                 format: int64
+                 default: 37687
+         responses:
+            200:
+               description: Success get recipe by post-id
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           data:
+                              type: object
+                              $ref: "#/components/schemas/Recipe"
+            404:
+               $ref: "#/components/responses/ErrorRecipe"
+            default:
+               description: Unexpected error
+
+   /recipes/image/{id}:
+      get:
+         tags:
+            - recipes
+         summary: Get recipe image by id
+         description: This endpoint allows to get an recipe image by id.
+         parameters:
+            - name: id
+              in: path
+              required: true
+              description: id of recipe
+              schema:
+                 type: integer
+                 format: int64
+                 minimum: 1
+                 default: 37687
+         responses:
+            200:
+               description: success get recipe image with id
+               content:
+                  image/jpg:
+                     schema:
+                        type: string
+                        format: binary
+            404:
+               $ref: "#/components/responses/ErrorRecipe"
+            default:
+               description: Unexpected error
+
+   /recipes/keyword/{keyword}:
+      get:
+         tags:
+            - recipes
+         summary: Get recipe by keyword
+         description: This endpoint allows to get an recipe by keyword.
+         parameters:
+            - name: keyword
+              in: path
+              required: true
+              description: Keyword of recipe
+              schema:
+                 type: string
+                 minimum: 1
+                 default: resep-nasi-goreng-tek-tek
+         responses:
+            200:
+               description: Success get recipe by keyword
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           data:
+                              type: object
+                              $ref: "#/components/schemas/Recipe"
+            404:
+               $ref: "#/components/responses/ErrorRecipe"
+            default:
+               description: Unexpected error
+
+   /recipes/tags/{tagNames}:
+      get:
+         tags:
+            - recipes
+         summary: Get recipe by tags
+         description: >
+            This endpoint allows to get recipes with one or more tags.
+
+
+            `/recipes/info` to get a list of tags.
+         parameters:
+            - name: tagNames
+              in: path
+              required: true
+              description: >
+                 Tags of recipes.
+
+
+                    * Use `-` for separators between tags.
+
+                    * Use `_` for tag spaces.
+              schema:
+                 type: string
+                 minimum: 1
+                 default: masakan_internasional-kompor-arisan
+         responses:
+            200:
+               description: Success get recipes by tags
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           total_data:
+                              type: integer
+                           data:
+                              type: array
+                              items:
+                                 type: object
+                                 $ref: "#/components/schemas/Recipe"
+            404:
+               $ref: "#/components/responses/ErrorRecipe"
+            default:
+               description: Unexpected error
+
+   /recipes/author/{author}:
+      get:
+         tags:
+            - recipes
+         summary: Get recipe by author
+         description: >
+            This endpoint allows to get recipes by author.
+
+
+            `/recipes/info` to get a list of authors.
+         parameters:
+            - name: author
+              in: path
+              required: true
+              description: >
+                 Author of recipes.
+
+
+                 * Use `_` for spaces.
+              schema:
+                 type: string
+                 minimum: 1
+                 default: chef_panji
+         responses:
+            200:
+               description: Success get recipes by author
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           total_data:
+                              type: integer
+                           data:
+                              type: array
+                              items:
+                                 type: object
+                                 $ref: "#/components/schemas/Recipe"
+            404:
+               $ref: "#/components/responses/ErrorRecipe"
+            default:
+               description: Unexpected error
+
+   /recipes/category/{category}:
+      get:
+         tags:
+            - recipes
+         summary: Get recipes by category
+         description: >
+            This endpoint allows to get recipes by category.
+
+
+            `/recipes/info` to get a list of categories.
+         parameters:
+            - name: category
+              in: path
+              required: true
+              description: >
+                 Category of recipe
+
+
+                 * Use `_` for spaces.
+              schema:
+                 type: string
+                 minimum: 1
+                 default: resep_sayuran
+
+         responses:
+            200:
+               description: Success get recipes by category
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           total_data:
+                              type: integer
+                           data:
+                              type: array
+                              items:
+                                 type: object
+                                 $ref: "#/components/schemas/Recipe"
+            404:
+               $ref: "#/components/responses/ErrorRecipe"
+            default:
+               description: Unexpected error
+
+   /recipes/year/{year}:
+      get:
+         tags:
+            - recipes
+         summary: Get recipes by upload year
+         description: >
+            This endpoint allows to get recipes by upload year.
+
+
+
+            `/recipes/info` to get a list of upload years.
+         parameters:
+            - name: year
+              in: path
+              required: true
+              description: Upload year of recipe
+              schema:
+                 type: number
+                 minimum: 4
+                 default: 2022
+         responses:
+            200:
+               description: Success get recipes by upload year
+               content:
+                  application/json:
+                     schema:
+                        type: object
+                        properties:
+                           status:
+                              type: boolean
+                           message:
+                              type: string
+                           total_data:
+                              type: integer
+                           data:
+                              type: array
+                              items:
+                                 type: object
+                                 $ref: "#/components/schemas/Recipe"
+            404:
+               $ref: "#/components/responses/ErrorRecipe"
+            default:
+               description: Unexpected error
+
+#COMPONENTs
+components:
+   schemas:
+      Article:
+         type: object
+         properties:
+            id:
+               type: string
+               uniqueItems: true
+            article_info:
+               type: object
+               properties:
+                  title:
+                     type: string
+                     uniqueItems: true
+                  category:
+                     type: string
+                  author:
+                     type: string
+                  date:
+                     type: string
+                  keyword:
+                     type: string
+                     uniqueItems: true
+                  source:
+                     type: string
+                     uniqueItems: true
+                  tags:
+                     type: array
+                     items:
+                        type: string
+               required:
+                  - title
+                  - category
+                  - author
+                  - date
+                  - keyword
+                  - source
+                  - tags
+            contents:
+               type: object
+               properties:
+                  introduction:
+                     type: array
+                     items:
+                        type: string
+                  body:
+                     type: array
+                     items:
+                        type: object
+                        properties:
+                           heading:
+                              type: string
+                           paragraph:
+                              type: array
+                              items:
+                                 type: string
+                           sub-body:
+                              type: array
+                              items:
+                                 type: object
+                                 properties:
+                                    title:
+                                       type: string
+                                    paragraph:
+                                       type: array
+                                       items:
+                                          type: string
+                                 required:
+                                    - title
+                                    - paragraph
+                        required:
+                           - heading
+               required:
+                  - introduction
+                  - body
+         required:
+            - id
+            - article_info
+            - contents
+      Recipe:
+         type: object
+         properties:
+            id:
+               type: string
+               uniqueItems: true
+            recipe_info:
+               type: object
+               properties:
+                  title:
+                     type: string
+                     uniqueItems: true
+                  category:
+                     type: string
+                  author:
+                     type: string
+                  date:
+                     type: string
+                  time:
+                     type: string
+                  servings:
+                     type: string
+                  difficulty:
+                     type: string
+                  keyword:
+                     type: string
+                     uniqueItems: true
+                  source:
+                     type: string
+                     uniqueItems: true
+                  tags:
+                     type: array
+                     items:
+                        type: string
+               required:
+                  - title
+                  - category
+                  - author
+                  - date
+                  - time
+                  - servings
+                  - difficulty
+                  - keyword
+                  - source
+                  - tags
+            contents:
+               type: object
+               properties:
+                  introduction:
+                     type: string
+                  body:
+                     type: array
+                     items:
+                        type: object
+                        properties:
+                           heading:
+                              type: string
+                           paragraph:
+                              type: array
+                              items:
+                                 type: string
+                           list:
+                              type: array
+                              items:
+                                 type: string
+               required:
+                  - introduction
+                  - body
+            ingredients:
+               type: object
+               properties:
+                  product:
+                     type: string
+                  groups:
+                     type: array
+                     items:
+                        type: object
+                        properties:
+                           name:
+                              type: string
+                           list:
+                              type: array
+                              items:
+                                 type: string
+                        required:
+                           - name
+                           - list
+               required:
+                  - groups
+            steps:
+               type: array
+               items:
+                  type: string
+         required:
+            - id
+            - recipe_info
+            - contents
+            - ingredients
+            - steps
+      Error:
+         type: object
+         properties:
+            status:
+               type: boolean
+            message:
+               type: string
+         example:
+            status: false
+            message: string
+   responses:
+      ErrorArticle:
+         description: Article Not found
+         content:
+            application/json:
+               schema:
+                  $ref: "#/components/schemas/Error"
+      ErrorRecipe:
+         description: Recipe Not found
+         content:
+            application/json:
+               schema:
+                  $ref: "#/components/schemas/Error"

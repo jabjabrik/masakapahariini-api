@@ -1,0 +1,46 @@
+{
+    "name": "api",
+    "version": "1.0.0",
+    "description": "Unofficial rest API for articles and recipes from www.masakapahariini.com blog.",
+    "main": "app.js",
+    "type": "module",
+    "scripts": {
+        "start": "node app.js",
+        "dev": "set NODE_ENV=dev&&nodemon app.js",
+        "lint": "eslint --fix ."
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jabjabrik/masakapahariini-api.git"
+    },
+    "keywords": [
+        "scrape",
+        "API",
+        "nodejs"
+    ],
+    "author": "MochYusuf",
+    "dependencies": {
+        "@aws-sdk/client-dynamodb": "^3.288.0",
+        "@aws-sdk/client-s3": "^3.288.0",
+        "@aws-sdk/util-dynamodb": "^3.288.0",
+        "cors": "^2.8.5",
+        "dotenv": "^16.0.3",
+        "express": "^4.18.2",
+        "morgan": "^1.10.0",
+        "swagger-ui-express": "^4.6.2",
+        "yamljs": "^0.3.0"
+    },
+    "devDependencies": {
+        "eslint": "^8.35.0",
+        "eslint-config-airbnb-base": "^15.0.0",
+        "eslint-config-node": "^4.1.0",
+        "eslint-config-prettier": "^8.7.0",
+        "eslint-plugin-node": "^11.1.0",
+        "eslint-plugin-prettier": "^4.2.1",
+        "nodemon": "^2.0.21",
+        "prettier": "^2.8.4"
+    },
+    "engines": {
+        "node": ">=16.0.0"
+    }
+}
